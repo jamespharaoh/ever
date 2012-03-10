@@ -1,0 +1,34 @@
+Simple command line client for evernote.
+
+I wrote this so I could do some batch renames. It can be extended to do more,
+and probably will be when I need to do something else.
+
+You need an evernote client key to use it.
+
+Usage:
+
+$ ./ever auth username password key_id key_secret
+Authenticating as username
+warning: peer certificate won't be verified in this SSL session
+warning: peer certificate won't be verified in this SSL session
+warning: peer certificate won't be verified in this SSL session
+
+$ ./ever list-notebooks
+Listing notebooks
+23319254-3f67-4937-851d-d425c06e148a usernames's notebook
+
+$ ./ever list-notes-by-notebook 23319254-3f67-4937-851d-d425c06e148a
+Listing notes
+389712b1-eb7c-4e87-8dd7-0c2db92a3b1b a sample note
+
+$ ./ever rename-note 389712b1-eb7c-4e87-8dd7-0c2db92a3b1b new name
+Renaming note
+
+$ ./ever end
+Session ended
+
+It stores authentication details in ~/.config/ever, and deletes them when you
+run the "end" command.
+
+James Pharaoh
+james@phsys.co.uk
