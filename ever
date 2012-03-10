@@ -1,0 +1,163 @@
+#!/usr/bin/env ruby
+
+require "rubygems"
+
+require "evernote"
+require "pp"
+
+EVER = "#{ENV["HOME"]}/.config/ever"
+
+def require_auth
+
+	unless File.exists? EVER
+		$stderr.puts "Not logged in"
+		exit 1
+	end
+
+	File.open EVER, "r" do |f|
+		$username = f.gets.strip
+		$shard_id = f.gets.strip
+		$auth_token = f.gets.strip
+	end
+
+end
+
+def note_store
+
+	return $note_store if $note_store
+
+	require_auth
+
+	note_store_url =
+		"http://sandbox.evernote.com/edam/note/#{$shard_id}"
+
+	$note_store =
+		Evernote::NoteStore.new(
+			note_store_url)
+end
+
+command = ARGV.shift
+
+case command
+
+	when "auth"
+
+		username = ARGV.shift
+		password = ARGV.shift
+		consumer_key = ARGV.shift
+		consumer_secret = ARGV.shift
+
+		$stderr.puts "Authenticating as #{username}"
+
+		user_store_url =
+			"https://sandbox.evernote.com/edam/user"
+
+		config = {
+			:username => username,
+			:password => password,
+			:consumer_key => consumer_key,
+			:consumer_secret => consumer_secret,
+		}
+
+		user_store =
+			Evernote::UserStore.new(
+				user_store_url,
+				config)
+
+		auth_result =
+			user_store.authenticate
+
+		user =
+			auth_result.user
+
+		auth_token =
+			auth_result.authenticationToken
+
+		File.umask 0077
+		File.open EVER, "w" do |f|
+			f.puts user.username
+			f.puts user.shardId
+			f.puts auth_token
+		end
+
+	when "end"
+
+		if File.exists? EVER
+			File.unlink EVER
+		end
+
+		$stderr.puts "Session ended"
+
+	when "list-notebooks"
+
+		require_auth
+
+		$stderr.puts "Listing notebooks"
+
+		notebooks =
+			note_store.listNotebooks(
+				$auth_token)
+
+		notebooks.each do |notebook|
+			puts [
+				notebook.guid,
+				notebook.name,
+			].join " "
+		end
+
+	when "list-notes-by-notebook"
+
+		require_auth
+
+		$stderr.puts "Listing notes"
+
+		notebook_guid = ARGV.shift
+
+		filter =
+			Evernote::EDAM::NoteStore::NoteFilter.new
+
+		filter.notebookGuid = notebook_guid
+
+		note_list =
+			note_store.findNotes(
+				$auth_token,
+				filter,
+				0,
+				1000)
+
+		note_list.notes.each do |note|
+			puts [
+				note.guid,
+				note.title,
+			].join " "
+		end
+
+	when "rename-note"
+
+		require_auth
+
+		$stderr.puts "Renaming note"
+
+		note_guid = ARGV.shift
+		new_name = ARGV.shift
+
+		note =
+			note_store.getNote(
+				$auth_token,
+				note_guid,
+				false,
+				false,
+				false,
+				false)
+
+		note.title = new_name
+
+		note_store.updateNote(
+			$auth_token,
+			note)
+
+	else
+
+		$stderr.puts "Syntax error"
+
+end
