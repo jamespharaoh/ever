@@ -5,16 +5,18 @@ require "rubygems"
 require "evernote"
 require "pp"
 
-EVER = "#{ENV["HOME"]}/.config/ever"
+$base_url = "https://www.evernote.com"
+
+$config_path = "#{ENV["HOME"]}/.config/ever"
 
 def require_auth
 
-	unless File.exists? EVER
+	unless File.exists? $config_path
 		$stderr.puts "Not logged in"
 		exit 1
 	end
 
-	File.open EVER, "r" do |f|
+	File.open $config_path, "r" do |f|
 		$username = f.gets.strip
 		$shard_id = f.gets.strip
 		$auth_token = f.gets.strip
@@ -29,7 +31,7 @@ def note_store
 	require_auth
 
 	note_store_url =
-		"http://sandbox.evernote.com/edam/note/#{$shard_id}"
+		"#{$base_url}/edam/note/#{$shard_id}"
 
 	$note_store =
 		Evernote::NoteStore.new(
@@ -50,7 +52,7 @@ case command
 		$stderr.puts "Authenticating as #{username}"
 
 		user_store_url =
-			"https://sandbox.evernote.com/edam/user"
+			"#{$base_url}/edam/user"
 
 		config = {
 			:username => username,
@@ -74,7 +76,7 @@ case command
 			auth_result.authenticationToken
 
 		File.umask 0077
-		File.open EVER, "w" do |f|
+		File.open $config_path, "w" do |f|
 			f.puts user.username
 			f.puts user.shardId
 			f.puts auth_token
@@ -82,8 +84,8 @@ case command
 
 	when "end"
 
-		if File.exists? EVER
-			File.unlink EVER
+		if File.exists? $config_path
+			File.unlink $config_path
 		end
 
 		$stderr.puts "Session ended"

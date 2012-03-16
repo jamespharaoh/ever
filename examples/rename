@@ -1,0 +1,45 @@
+#!/bin/bash
+
+notebook_guid="$1"
+grep_match="$2"
+sed_replace="$3"
+
+let num_total=0
+let num_renamed=0
+
+# create temp file
+temp="$(tempfile)"
+trap "rm $temp" EXIT
+
+# list notes to temp file
+ever list-notes-by-notebook "$notebook_guid" 2>/dev/null >$temp
+
+# read temp file
+exec {name}<$temp
+while read line <&$name; do
+
+	let num_total++
+
+	note_guid="${line%% *}"
+	note_title="${line#* }"
+
+	# skip if this title doesn't match
+	echo "$note_title" | grep -q "$grep_match" || continue
+
+	# work out the new title
+	new_title="$(echo "$note_title" | sed "$sed_replace")"
+
+	# skip if the title hasn't changed
+	test "$note_title" != "$new_title" || continue
+
+	let num_renamed++
+
+	# output a message
+	echo "$note_guid $note_title -> $new_title" >&2
+
+	# perform the rename
+	ever rename-note "$note_guid" "$new_title" 2>/dev/null
+
+done
+
+echo "Renamed $num_renamed out of $num_total notes" >&2
